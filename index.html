@@ -1,0 +1,938 @@
+<!--
+  Rui Santos
+  Complete project details at https://RandomNerdTutorials.com/esp32-web-bluetooth/
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files.
+  The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+-->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP32 Web BLE App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="favicon.ico">
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <meta charset="UTF-8">
+</head>
+<body>
+    <div class="topnav">
+        <h1>ESP32 Web BLE Application</h1>
+    </div>
+    <div class="content">
+        <div class="card-grid">
+            <div class="card">
+                <p>
+					<img src="favicon.ico" width="50" height="50">
+                    <button id="connectBleButton" class="connectButton"> Connect to BLE Device</button>
+                    <button id="disconnectBleButton" class="disconnectButton"> Disconnect BLE Device</button>
+					<img src="favicon.ico" width="50" height="50">
+				</p>
+                <p class="gray-label">BLE state: <strong><span id="bleState" style="color:#d13a30;">Disconnected</span></strong></p>
+            </div>
+        </div>
+        <div class="card-grid">
+            <div class="card">
+                <h2>PWR-DC</h2>
+                <p class="reading"><span id="valueContainer1a">NaN</span></p>
+                <p class="reading"><span id="valueContainer2a">NaN</span></p>
+                <p class="reading"><span id="valueContainer3a">NaN</span></p>
+                <p class="reading"><span id="valueContainer4a">NaN</span></p>
+                <p class="reading"><span id="valueContainer5a">NaN</span></p>
+                <p class="reading"><span id="valueContainer6a">NaN</span></p>
+                <p class="reading"><span id="valueContainer7a">NaN</span></p>
+                <p class="reading"><span id="valueContainer8a">NaN</span></p>
+                <p class="gray-label">Last reading: <span id="timestampA"></span></p>
+            </div>
+            <div class="card">
+                <h2>PWR-Sol</h2>
+                <p class="reading"><span id="valueContainer1b">NaN</span></p>
+                <p class="reading"><span id="valueContainer2b">NaN</span></p>
+                <p class="reading"><span id="valueContainer3b">NaN</span></p>
+                <p class="reading"><span id="valueContainer4b">NaN</span></p>
+                <p class="reading"><span id="valueContainer5b">NaN</span></p>
+                <p class="reading"><span id="valueContainer6b">NaN</span></p>
+                <p class="reading"><span id="valueContainer7b">NaN</span></p>
+                <p class="reading"><span id="valueContainer8b">NaN</span></p>
+                <p class="gray-label">Last reading: <span id="timestampB"></span></p>
+            </div>
+        </div>
+		<div class="card-grid">
+            <div class="card">
+                <p>
+                <h2>Relays and LED Control</h2>
+                <button id="onButton1" class="onButton">ON</button>
+                <button id="offButton1" class="offButton">OFF</button>
+                <button id="onButton2" class="onButton">ON</button>
+                <button id="offButton2" class="offButton">OFF</button>
+                <button id="onButton3" class="onButton">ON</button>
+                <button id="offButton3" class="offButton">OFF</button>
+                <button id="onButton4" class="onButton">ON</button>
+                <button id="offButton4" class="offButton">OFF</button>
+                <button id="onButton5" class="onButton">ON</button>
+                <button id="offButton5" class="offButton">OFF</button>
+                <p class="gray-label">Last value sent: <span id="valueSent"></span></p>
+				</p>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script>
+    // DOM Elements
+    const retrievedValue1a = document.getElementById('valueContainer1a');	
+    const retrievedValue2a = document.getElementById('valueContainer2a');	
+    const retrievedValue3a = document.getElementById('valueContainer3a');	
+    const retrievedValue4a = document.getElementById('valueContainer4a');	
+    const retrievedValue5a = document.getElementById('valueContainer5a');	
+    const retrievedValue6a = document.getElementById('valueContainer6a');	
+    const retrievedValue7a = document.getElementById('valueContainer7a');	
+    const retrievedValue8a = document.getElementById('valueContainer8a');	
+	
+    const retrievedValue1b =document.getElementById('valueContainer1b');	
+    const retrievedValue2b =document.getElementById('valueContainer2b');	
+    const retrievedValue3b =document.getElementById('valueContainer3b');	
+    const retrievedValue4b =document.getElementById('valueContainer4b');	
+    const retrievedValue5b =document.getElementById('valueContainer5b');	
+    const retrievedValue6b =document.getElementById('valueContainer6b');	
+    const retrievedValue7b =document.getElementById('valueContainer7b');	
+    const retrievedValue8b = document.getElementById('valueContainer8b');	
+
+    const connectButton = document.getElementById('connectBleButton');
+    const disconnectButton = document.getElementById('disconnectBleButton');
+	
+    const onButton1 = document.getElementById('onButton1');
+    const offButton1 = document.getElementById('offButton1');
+    const onButton2 = document.getElementById('onButton2');
+    const offButton2 = document.getElementById('offButton2');
+    const onButton3 = document.getElementById('onButton3');
+    const offButton3 = document.getElementById('offButton3');
+    const onButton4 = document.getElementById('onButton4');
+    const offButton4 = document.getElementById('offButton4');
+    const onButton5 = document.getElementById('onButton5');
+    const offButton5 = document.getElementById('offButton5');
+
+    const latestValueSent = document.getElementById('valueSent');
+    const bleStateContainer = document.getElementById('bleState');
+	
+    const timestampContainerA = document.getElementById('timestampA');
+    const timestampContainerB = document.getElementById('timestampB');
+
+    //Define BLE Device Specs
+    var deviceName ='ESP32';
+    var bleService = '19b10000-e8f2-537e-4f6c-d104768a1214';
+	
+    var sensorCharacteristic1a= '19b10001-e8f2-537e-4f6c-d104768a1214';
+    var sensorCharacteristic2a= '19b10002-e8f2-537e-4f6c-d104768a1214';
+    var sensorCharacteristic3a= '19b10003-e8f2-537e-4f6c-d104768a1214';
+    var sensorCharacteristic4a= '19b10004-e8f2-537e-4f6c-d104768a1214';
+    var sensorCharacteristic5a= '19b10005-e8f2-537e-4f6c-d104768a1214';
+    var sensorCharacteristic6a= '19b10006-e8f2-537e-4f6c-d104768a1214';
+    var sensorCharacteristic7a= '19b10007-e8f2-537e-4f6c-d104768a1214';
+    var sensorCharacteristic8a= '19b10008-e8f2-537e-4f6c-d104768a1214';
+	
+    var sensorCharacteristic1b= '19b10011-e8f2-537e-4f6c-d104768a1214';
+    var sensorCharacteristic2b= '19b10012-e8f2-537e-4f6c-d104768a1214';
+    var sensorCharacteristic3b= '19b10013-e8f2-537e-4f6c-d104768a1214';
+    var sensorCharacteristic4b= '19b10014-e8f2-537e-4f6c-d104768a1214';
+    var sensorCharacteristic5b= '19b10015-e8f2-537e-4f6c-d104768a1214';
+    var sensorCharacteristic6b= '19b10016-e8f2-537e-4f6c-d104768a1214';
+    var sensorCharacteristic7b= '19b10017-e8f2-537e-4f6c-d104768a1214';
+    var sensorCharacteristic8b= '19b10018-e8f2-537e-4f6c-d104768a1214';
+	
+    var ledCharacteristicA = '19b10020-e8f2-537e-4f6c-d104768a1214';
+	var ledCharacteristicB = '19b10021-e8f2-537e-4f6c-d104768a1214';
+	var ledCharacteristicC = '19b10022-e8f2-537e-4f6c-d104768a1214';
+	var ledCharacteristicD = '19b10023-e8f2-537e-4f6c-d104768a1214';
+	var ledCharacteristicE = '19b10024-e8f2-537e-4f6c-d104768a1214';
+	
+    var buttonCharacteristicA = '19b10030-e8f2-537e-4f6c-d104768a1214';
+	var buttonCharacteristicB = '19b10031-e8f2-537e-4f6c-d104768a1214';
+	var buttonCharacteristicC = '19b10032-e8f2-537e-4f6c-d104768a1214';
+	var buttonCharacteristicD = '19b10033-e8f2-537e-4f6c-d104768a1214';
+	var buttonCharacteristicE = '19b10034-e8f2-537e-4f6c-d104768a1214';
+
+    //Global Variables to Handle Bluetooth
+    var bleServer;
+    var bleServiceFound;
+	
+    var sensorCharacteristicFound1a;
+    var sensorCharacteristicFound2a;
+    var sensorCharacteristicFound3a;
+    var sensorCharacteristicFound4a;
+    var sensorCharacteristicFound5a;
+    var sensorCharacteristicFound6a;
+    var sensorCharacteristicFound7a;
+    var sensorCharacteristicFound8a;
+
+    var sensorCharacteristicFound1b;
+    var sensorCharacteristicFound2b;
+    var sensorCharacteristicFound3b;
+    var sensorCharacteristicFound4b;
+    var sensorCharacteristicFound5b;
+    var sensorCharacteristicFound6b;
+    var sensorCharacteristicFound7b;
+    var sensorCharacteristicFound8b;
+
+    // Connect Button (search for BLE Devices only if BLE is available)
+    connectButton.addEventListener('click', (event) => {
+        if (isWebBluetoothEnabled()){
+            connectToDevice();
+        }
+    });
+
+    // Disconnect Button
+    disconnectButton.addEventListener('click', disconnectDevice);
+
+    // Write to the ESP32 LED Characteristic
+    onButton1.addEventListener('click', () => writeOnCharacteristicA(1));
+    offButton1.addEventListener('click', () => writeOnCharacteristicA(0));
+    onButton2.addEventListener('click', () => writeOnCharacteristicB(1));
+    offButton2.addEventListener('click', () => writeOnCharacteristicB(0));
+    onButton3.addEventListener('click', () => writeOnCharacteristicC(1));
+    offButton3.addEventListener('click', () => writeOnCharacteristicC(0));
+    onButton4.addEventListener('click', () => writeOnCharacteristicD(1));
+    offButton4.addEventListener('click', () => writeOnCharacteristicD(0));
+    onButton5.addEventListener('click', () => writeOnCharacteristicE(1));
+    offButton5.addEventListener('click', () => writeOnCharacteristicE(0));
+
+    // Check if BLE is available in your Browser
+    function isWebBluetoothEnabled() {
+        if (!navigator.bluetooth) {
+            console.log("Web Bluetooth API is not available in this browser!");
+            bleStateContainer.innerHTML = "Web Bluetooth API is not available in this browser!";
+            return false
+        }
+        console.log('Web Bluetooth API supported in this browser.');
+        return true
+    }
+
+    // Connect to BLE Device and Enable Notifications
+    function connectToDevice(){
+        console.log('Initializing Bluetooth...');
+        navigator.bluetooth.requestDevice({
+            filters: [{name: deviceName}],
+            optionalServices: [bleService]
+        })
+        .then(device => {
+            console.log('Device Selected:', device.name);
+            bleStateContainer.innerHTML = 'Connected to device ' + device.name;
+            bleStateContainer.style.color = "#24af37";
+            device.addEventListener('gattservicedisconnected', onDisconnected);
+            return device.gatt.connect();
+        })
+        .then(gattServer =>{
+            bleServer = gattServer;
+            console.log("Connected to GATT Server");
+            return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            bleServiceFound = service;
+            console.log("Service discovered:", service.uuid);
+            return service.getCharacteristic(sensorCharacteristic8b);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound8b = characteristic;
+            return sensorCharacteristicFound8b.readValue();
+        })
+        .then(value => {
+			var rawInput = value;
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Raw input: ", rawInput);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue8b.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic7b);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound7b = characteristic;
+            return sensorCharacteristicFound7b.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue7b.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic6b);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound6b = characteristic;
+            return sensorCharacteristicFound6b.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue6b.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic5b);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound5b = characteristic;
+            return sensorCharacteristicFound5b.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue5b.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic4b);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound4b = characteristic;
+            return sensorCharacteristicFound4b.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue4b.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic3b);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound3b = characteristic;
+            return sensorCharacteristicFound3b.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue3b.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic2b);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound2b = characteristic;
+            return sensorCharacteristicFound2b.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue2b.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic1b);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound1b = characteristic;
+            return sensorCharacteristicFound1b.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue1b.innerHTML = intValueReceived;
+			
+			timestampContainerB.innerHTML = getDateTime();
+
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic8a);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound8a = characteristic;
+            return sensorCharacteristicFound8a.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue8a.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic7a);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound7a = characteristic;
+            return sensorCharacteristicFound7a.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue7a.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic6a);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound6a = characteristic;
+            return sensorCharacteristicFound6a.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue6a.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic5a);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound5a = characteristic;
+            return sensorCharacteristicFound5a.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue5a.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic4a);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound4a = characteristic;
+            return sensorCharacteristicFound4a.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue4a.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic3a);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound3a = characteristic;
+            return sensorCharacteristicFound3a.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue3a.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic2a);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound2a = characteristic;
+            return sensorCharacteristicFound2a.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue2a.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic1a);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound1a = characteristic;
+            return sensorCharacteristicFound1a.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue1a.innerHTML = intValueReceived;
+			
+			timestampContainerA.innerHTML = getDateTime();
+
+            return bleServiceFound.getCharacteristic(sensorCharacteristic1a);
+        })
+		.then(characteristic => {	
+            characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicChange);
+            characteristic.startNotifications();
+            console.log("Notifications Started.");
+		})
+       .catch(error => {
+            console.log('Error: ', error);
+        })
+    }
+
+	function onDisconnected(event){
+        console.log('Device Disconnected:', event.target.device.name);
+        bleStateContainer.innerHTML = "Device disconnected";
+        bleStateContainer.style.color = "#d13a30";
+
+        connectToDevice();
+    }
+
+    function handleCharacteristicChange(event){
+		console.log("function handleCharacteristicChange(event)");
+		bleServer.getPrimaryService(bleService)
+        .then(service => {
+            bleServiceFound = service;
+            console.log("Service discovered:", service.uuid);
+            return service.getCharacteristic(sensorCharacteristic8a);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound8a = characteristic;
+            return sensorCharacteristicFound8a.readValue();
+        })
+        .then(value => {
+			var rawInput = value;
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Raw input: ", rawInput);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue8a.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic7a);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound7a = characteristic;
+            return sensorCharacteristicFound7a.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue7a.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic6a);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound6a = characteristic;
+            return sensorCharacteristicFound6a.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue6a.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic5a);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound5a = characteristic;
+            return sensorCharacteristicFound5a.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue5a.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic4a);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound4a = characteristic;
+            return sensorCharacteristicFound4a.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue4a.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic3a);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound3a = characteristic;
+            return sensorCharacteristicFound3a.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue3a.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic2a);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound2a = characteristic;
+            return sensorCharacteristicFound2a.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue2a.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic1a);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound1a = characteristic;
+            return sensorCharacteristicFound1a.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue1a.innerHTML = intValueReceived;
+			
+			timestampContainerA.innerHTML = getDateTime();
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic8b);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound8b = characteristic;
+            return sensorCharacteristicFound8b.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue8b.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic7b);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound7b = characteristic;
+            return sensorCharacteristicFound7b.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue7b.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic6b);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound6b = characteristic;
+            return sensorCharacteristicFound6b.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue6b.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic5b);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound5b = characteristic;
+            return sensorCharacteristicFound5b.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue5b.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic4b);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound4b = characteristic;
+            return sensorCharacteristicFound4b.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue4b.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic3b);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound3b = characteristic;
+            return sensorCharacteristicFound3b.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue3b.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic2b);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound2b = characteristic;
+            return sensorCharacteristicFound2b.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue2b.innerHTML = intValueReceived;
+			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic1b);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound1b = characteristic;
+            return sensorCharacteristicFound1b.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue1b.innerHTML = intValueReceived;
+			
+			timestampContainerA.innerHTML = getDateTime();
+        })
+       .catch(error => {
+            console.log('Error: ', error);
+        })
+
+    }
+
+
+    function writeOnCharacteristicA(value){
+        if (bleServer && bleServer.connected) {
+            bleServiceFound.getCharacteristic(ledCharacteristicA)
+            .then(characteristic => {
+                console.log("Found the LED characteristic: ", characteristic.uuid);
+                const data = new Uint8Array([value]);
+                return characteristic.writeValue(data);
+            })
+            .then(() => {
+                latestValueSent.innerHTML = value;
+                console.log("Value written to LEDcharacteristic:", value);
+            })
+            .catch(error => {
+                console.error("Error writing to the LED characteristic: ", error);
+            });
+        } else {
+            console.error ("Bluetooth is not connected. Cannot write to characteristic.")
+            window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!")
+        }
+    }
+
+    function writeOnCharacteristicB(value){
+        if (bleServer && bleServer.connected) {
+            bleServiceFound.getCharacteristic(ledCharacteristicB)
+            .then(characteristic => {
+                console.log("Found the LED characteristic: ", characteristic.uuid);
+                const data = new Uint8Array([value]);
+                return characteristic.writeValue(data);
+            })
+            .then(() => {
+                latestValueSent.innerHTML = value;
+                console.log("Value written to LEDcharacteristic:", value);
+            })
+            .catch(error => {
+                console.error("Error writing to the LED characteristic: ", error);
+            });
+        } else {
+            console.error ("Bluetooth is not connected. Cannot write to characteristic.")
+            window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!")
+        }
+    }
+
+    function writeOnCharacteristicC(value){
+        if (bleServer && bleServer.connected) {
+            bleServiceFound.getCharacteristic(ledCharacteristicC)
+            .then(characteristic => {
+                console.log("Found the LED characteristic: ", characteristic.uuid);
+                const data = new Uint8Array([value]);
+                return characteristic.writeValue(data);
+            })
+            .then(() => {
+                latestValueSent.innerHTML = value;
+                console.log("Value written to LEDcharacteristic:", value);
+            })
+            .catch(error => {
+                console.error("Error writing to the LED characteristic: ", error);
+            });
+        } else {
+            console.error ("Bluetooth is not connected. Cannot write to characteristic.")
+            window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!")
+        }
+    }
+
+    function writeOnCharacteristicD(value){
+        if (bleServer && bleServer.connected) {
+            bleServiceFound.getCharacteristic(ledCharacteristicD)
+            .then(characteristic => {
+                console.log("Found the LED characteristic: ", characteristic.uuid);
+                const data = new Uint8Array([value]);
+                return characteristic.writeValue(data);
+            })
+            .then(() => {
+                latestValueSent.innerHTML = value;
+                console.log("Value written to LEDcharacteristic:", value);
+            })
+            .catch(error => {
+                console.error("Error writing to the LED characteristic: ", error);
+            });
+        } else {
+            console.error ("Bluetooth is not connected. Cannot write to characteristic.")
+            window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!")
+        }
+    }
+
+    function writeOnCharacteristicE(value){
+        if (bleServer && bleServer.connected) {
+            bleServiceFound.getCharacteristic(ledCharacteristicE)
+            .then(characteristic => {
+                console.log("Found the LED characteristic: ", characteristic.uuid);
+                const data = new Uint8Array([value]);
+                return characteristic.writeValue(data);
+            })
+            .then(() => {
+                latestValueSent.innerHTML = value;
+                console.log("Value written to LEDcharacteristic:", value);
+            })
+            .catch(error => {
+                console.error("Error writing to the LED characteristic: ", error);
+            });
+        } else {
+            console.error ("Bluetooth is not connected. Cannot write to characteristic.")
+            window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!")
+        }
+    }
+
+    function disconnectDevice() {
+        console.log("Disconnect Device.");
+        if (bleServer && bleServer.connected) {
+            if (sensorCharacteristicFound1a) {
+                sensorCharacteristicFound1a.stopNotifications()
+                    .then(() => {
+                        console.log("Notifications Stopped");
+                        return bleServer.disconnect();
+                    })
+                    .then(() => {
+                        console.log("Device Disconnected");
+                        bleStateContainer.innerHTML = "Device Disconnected";
+                        bleStateContainer.style.color = "#d13a30";
+
+                    })
+                    .catch(error => {
+                        console.log("An error occurred:", error);
+                    });
+            } else {
+                console.log("No characteristic found to disconnect.");
+            }
+        } else {
+            // Throw an error if Bluetooth is not connected
+            console.error("Bluetooth is not connected.");
+            window.alert("Bluetooth is not connected.")
+        }
+    }
+
+    function getDateTime() {
+        var currentdate = new Date();
+                console.log("Value currentdate: ", currentdate);
+        var day = ("00" + currentdate.getDate()).slice(-2); // Convert day to string and slice
+                //console.log("Value day: ", day);
+        var month = ("00" + (currentdate.getMonth() + 1)).slice(-2);
+                //console.log("Value month: ", month);
+        var year = currentdate.getFullYear();
+                //console.log("Value year: ", year);
+        var hours = ("00" + currentdate.getHours()).slice(-2);
+                //console.log("Value hours: ", hours);
+        var minutes = ("00" + currentdate.getMinutes()).slice(-2);
+                //console.log("Value minutes: ", minutes);
+        var seconds = ("00" + currentdate.getSeconds()).slice(-2);
+                //console.log("Value seconds: ", seconds);
+
+        var datetime = day + "/" + month + "/" + year + " at " + hours + ":" + minutes + ":" + seconds;
+        return datetime;
+    }
+
+</script>
+
+</html>
