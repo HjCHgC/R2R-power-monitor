@@ -33,7 +33,7 @@
         </div>
         <div class="card-grid">
             <div class="card">
-                <h2>PWR-DC</h2>
+                <h2 class="reading"><span id="valueContainer0a">NaN</span></h2>
                 <p class="reading"><span id="valueContainer1a">NaN</span></p>
                 <p class="reading"><span id="valueContainer2a">NaN</span></p>
                 <p class="reading"><span id="valueContainer3a">NaN</span></p>
@@ -45,7 +45,7 @@
                 <p class="gray-label">Last reading: <span id="timestampA"></span></p>
             </div>
             <div class="card">
-                <h2>PWR-Sol</h2>
+                <h2 class="reading"><span id="valueContainer0b">NaN</span></h2>
                 <p class="reading"><span id="valueContainer1b">NaN</span></p>
                 <p class="reading"><span id="valueContainer2b">NaN</span></p>
                 <p class="reading"><span id="valueContainer3b">NaN</span></p>
@@ -104,6 +104,7 @@
 
 <script>
     // DOM Elements
+    const retrievedValue0a = document.getElementById('valueContainer0a');	
     const retrievedValue1a = document.getElementById('valueContainer1a');	
     const retrievedValue2a = document.getElementById('valueContainer2a');	
     const retrievedValue3a = document.getElementById('valueContainer3a');	
@@ -113,6 +114,7 @@
     const retrievedValue7a = document.getElementById('valueContainer7a');	
     const retrievedValue8a = document.getElementById('valueContainer8a');	
 	
+    const retrievedValue0b = document.getElementById('valueContainer0b');	
     const retrievedValue1b = document.getElementById('valueContainer1b');	
     const retrievedValue2b = document.getElementById('valueContainer2b');	
     const retrievedValue3b = document.getElementById('valueContainer3b');	
@@ -154,6 +156,7 @@
     var deviceName ='ESP32';
     var bleService = '19b10000-e8f2-537e-4f6c-d104768a1214';
 	
+    var sensorCharacteristic0a= '19b11000-e8f2-537e-4f6c-d104768a1214';
     var sensorCharacteristic1a= '19b10001-e8f2-537e-4f6c-d104768a1214';
     var sensorCharacteristic2a= '19b10002-e8f2-537e-4f6c-d104768a1214';
     var sensorCharacteristic3a= '19b10003-e8f2-537e-4f6c-d104768a1214';
@@ -163,6 +166,7 @@
     var sensorCharacteristic7a= '19b10007-e8f2-537e-4f6c-d104768a1214';
     var sensorCharacteristic8a= '19b10008-e8f2-537e-4f6c-d104768a1214';
 	
+    var sensorCharacteristic0b= '19b11010-e8f2-537e-4f6c-d104768a1214';
     var sensorCharacteristic1b= '19b10011-e8f2-537e-4f6c-d104768a1214';
     var sensorCharacteristic2b= '19b10012-e8f2-537e-4f6c-d104768a1214';
     var sensorCharacteristic3b= '19b10013-e8f2-537e-4f6c-d104768a1214';
@@ -184,6 +188,7 @@
     var bleServer;
     var bleServiceFound;
 	
+    var sensorCharacteristicFound0a;
     var sensorCharacteristicFound1a;
     var sensorCharacteristicFound2a;
     var sensorCharacteristicFound3a;
@@ -193,6 +198,7 @@
     var sensorCharacteristicFound7a;
     var sensorCharacteristicFound8a;
 
+    var sensorCharacteristicFound0b;
     var sensorCharacteristicFound1b;
     var sensorCharacteristicFound2b;
     var sensorCharacteristicFound3b;
@@ -392,6 +398,22 @@
 			var intValueReceived = String(newValueReceived);
             retrievedValue1b.innerHTML = intValueReceived;
 			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic0b);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound0b = characteristic;
+            return sensorCharacteristicFound0b.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue0b.innerHTML = intValueReceived;
+			
 			timestampContainerB.innerHTML = getDateTime();
 
 			return bleServer.getPrimaryService(bleService);
@@ -521,6 +543,22 @@
             console.log("Decoded value: ", newValueReceived);
 			var intValueReceived = String(newValueReceived);
             retrievedValue1a.innerHTML = intValueReceived;
+			
+            return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic0a);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound0a = characteristic;
+            return sensorCharacteristicFound0a.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue0a.innerHTML = intValueReceived;
 			
 			timestampContainerA.innerHTML = getDateTime();
 
@@ -677,6 +715,22 @@
 			var intValueReceived = String(newValueReceived);
             retrievedValue1a.innerHTML = intValueReceived;
 			
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic0a);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound0a = characteristic;
+            return sensorCharacteristicFound0a.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue0a.innerHTML = intValueReceived;
+			
 			timestampContainerA.innerHTML = getDateTime();
 			
 			return bleServer.getPrimaryService(bleService);
@@ -806,6 +860,22 @@
             console.log("Decoded value: ", newValueReceived);
 			var intValueReceived = String(newValueReceived);
             retrievedValue1b.innerHTML = intValueReceived;
+
+			return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            return service.getCharacteristic(sensorCharacteristic0b);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            sensorCharacteristicFound0b = characteristic;
+            return sensorCharacteristicFound0b.readValue();
+        })
+        .then(value => {
+            var newValueReceived = new TextDecoder().decode(value);
+            console.log("Decoded value: ", newValueReceived);
+			var intValueReceived = String(newValueReceived);
+            retrievedValue0b.innerHTML = intValueReceived;
 			
 			timestampContainerA.innerHTML = getDateTime();
         })
