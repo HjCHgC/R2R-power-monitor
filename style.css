@@ -7,6 +7,18 @@ h1 {
     font-size: 1.8rem;
     color: white;
 }
+h2 {
+    font-size: 1.3rem;
+    color: black;
+}
+h3 {
+    font-size: 1.0rem;
+    color: black;
+}
+h4 {
+    font-size: 0.8rem;
+    color: black;
+}
 .topnav {
     overflow: hidden;
     background-color: #0A1128;
@@ -41,9 +53,10 @@ button {
     color: white;
     padding: 14px 20px;
     margin: 8px 0;
-    border: none;
+    border: 3px 1;
     cursor: pointer;
     border-radius: 4px;
+    box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5);
 }
 
 .onButton{
@@ -67,6 +80,11 @@ button {
     font-size: 1rem;
 }
 
+.gray-label2 {
+    color: #bebebe;
+    font-size: 0.8rem;
+}
+
 .reading {
-    font-size: 1.8rem;
+    font-size: 1.0rem;
 }
